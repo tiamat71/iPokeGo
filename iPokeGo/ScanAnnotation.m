@@ -18,6 +18,7 @@
         self.title          = NSLocalizedString(@"Scan location", @"The title of an annotation on the map to scan the location.");
         self.coordinate     = location;
         self.circle         = [MKCircle circleWithCenterCoordinate:self.coordinate radius:self.radius];
+        self.scanLocationID = [NSString stringWithFormat:@"%f,%f", self.coordinate.latitude, self.coordinate.longitude];
     }
     
     return self;
@@ -34,6 +35,12 @@
         self.circle         = [MKCircle circleWithCenterCoordinate:scanlocation.location radius:scanlocation.radius];
     }
     return self;
+}
+
+-(void)drawCircleWithRadius:(int)radius
+{
+    self.radius = radius;
+    self.circle = [MKCircle circleWithCenterCoordinate:self.coordinate radius:radius];
 }
 
 @end
