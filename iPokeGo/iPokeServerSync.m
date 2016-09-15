@@ -15,7 +15,20 @@
 
 @implementation iPokeServerSync
 
+NSString * const ServerForceReloadData = @"Poke.ServerForceReloadData";
+
 static NSURLSession *iPokeServerSyncSharedSession;
+
+-(id)init
+{
+    if(self = [super init])
+    {
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(necesaryToReload) name:ServerForceReloadData object:nil];
+        self.necessaryToReload = NO;
+    }
+    
+    return self;
+}
 
 + (NSURLSession *)sharedSession
 {
@@ -30,6 +43,11 @@ static NSURLSession *iPokeServerSyncSharedSession;
     });
     
     return iPokeServerSyncSharedSession;
+}
+
+-(void)necesaryToReload
+{
+    self.necessaryToReload = YES;
 }
 
 - (void)setLocation:(CLLocationCoordinate2D)location withRadius:(int)radius
@@ -130,10 +148,22 @@ static NSURLSession *iPokeServerSyncSharedSession;
         NSManagedObjectContext *context = [[CoreDataPersistance sharedInstance] newWorkerContext];
         [self processPokemonFromJSON:jsonData[@"pokemons"] usingContext:context];
         [self processStopsFromJSON:jsonData[@"pokestops"] usingContext:context];
-        [self processGymsFromJSON:jsonData[@"gyms"] usingContext:context];
+        
+        if([NSStringFromClass([jsonData[@"gyms"] class]) isEqualToString:@"__NSArrayM"])
+            [self processGymsFromJSON:jsonData[@"gyms"] usingContext:context];
+        else
+            [self processGymsFromJSON:[jsonData[@"gyms"] allValues] usingContext:context];
+        
         [self processSpawnPointsFromJSON:jsonData[@"spawnpoints"] usingContext:context];
         [self processScanLocationsFromJSON:[jsonData[@"scan_locations"] allValues] usingContext:context];
         [[CoreDataPersistance sharedInstance] commitChangesAndDiscardContext:context];
+        
+        if(self.necessaryToReload)
+        {
+            [[NSNotificationCenter defaultCenter] postNotificationName:MapViewReloadData object:nil];
+            self.necessaryToReload = NO;
+        }
+        
     }];
     [task resume];
 }
